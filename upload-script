@@ -16,8 +16,8 @@
 #
 # Ensure that the GITHUB_TOKEN secret is included
 #
-if [[ -z "$GITHUB_TOKEN" ]]; then
-  echo "Set the GITHUB_TOKEN env variable."
+if [[ -z "$POST_URL" ]]; then
+  echo "Set the post URL env variable."
   exit 1
 fi
 
@@ -34,7 +34,7 @@ fi
 # Sanity-check, show our arguments.
 #
 echo "Arguments : ${INPUT_ARGS}"
-echo "Release ID: ${INPUT_RELEASEID}"
+echo "POST URL: ${POST_URL}"
 
 
 
@@ -76,34 +76,6 @@ fi
 
 
 #
-# Prepare the headers for our curl-command.
-#
-AUTH_HEADER="Authorization: token ${GITHUB_TOKEN}"
-
-
-#
-# Get the release ID
-#
-if [ -z "${INPUT_RELEASEID}" ]; then
-
-    #
-    # Not specified?  Use the one from the payload
-    #
-    RELEASE_ID=$(jq --raw-output '.release.id' "$GITHUB_EVENT_PATH")
-
-    echo "Discovered RELEASE_ID: ${RELEASE_ID}"
-else
-
-    #
-    # Otherwise use the supplied value.
-    #
-    RELEASE_ID="${INPUT_RELEASEID}"
-
-    echo "Using supplied RELEASE_ID: ${RELEASE_ID}"
-fi
-
-
-#
 # For each matching file..
 #
 for file in $INPUT_ARGS; do
@@ -127,22 +99,14 @@ for file in $INPUT_ARGS; do
 
     FILENAME=$(basename "${file}")
 
-    UPLOAD_URL="https://uploads.github.com/repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}/assets?name=${FILENAME}"
+    UPLOAD_URL="${POST_URL}/upload?name=${FILENAME}"
     echo "Upload URL is ${UPLOAD_URL}"
 
     # Generate a temporary file.
     tmp=$(mktemp)
 
     # Upload the artifact - capturing HTTP response-code in our output file.
-    response=$(curl \
-        -sSL \
-        -XPOST \
-        -H "${AUTH_HEADER}" \
-        --upload-file "${file}" \
-        --header "Content-Type:application/octet-stream" \
-        --write-out "%{http_code}" \
-        --output $tmp \
-        "${UPLOAD_URL}")
+    response=$(curl -F "ziprepo=@${file}" "${UPLOAD_URL}")
 
     # If the curl-command returned a non-zero response we must abort
     if [ "$?" -ne 0 ]; then
