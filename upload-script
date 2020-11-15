@@ -35,6 +35,9 @@ fi
 #
 echo "Arguments : ${INPUT_ARGS}"
 echo "POST URL: ${POST_URL}"
+echo "REPO: ${REPO}"
+echo "BRANCH: ${BRANCH}"
+echo "RUN_ID: ${RUN_ID}"
 
 
 
@@ -106,7 +109,14 @@ for file in $INPUT_ARGS; do
     tmp=$(mktemp)
 
     # Upload the artifact - capturing HTTP response-code in our output file.
-    response=$(curl -F "ziprepo=@${file}" "${UPLOAD_URL}")
+    response=$(
+        curl -F "ziprepo=@${file}"\
+        -sSL \
+        --write-out "%{http_code}" \
+        --output $tmp \
+        "${UPLOAD_URL}")
+    echo $response
+    echo "curl -F \"ziprepo=@${file}\" \"${UPLOAD_URL}\""
 
     # If the curl-command returned a non-zero response we must abort
     if [ "$?" -ne 0 ]; then
